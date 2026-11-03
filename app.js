@@ -78,7 +78,9 @@ function render() {
 async function refresh() {
   const response = await fetch('./demo.json', {cache:'no-store'});
   if (!response.ok) throw Error('La centrale non è raggiungibile. Ricarica per riprovare.');
-  const latest = JSON.parse(localStorage.getItem("tarvis-pages-workspace") || "null") || await response.json();
+  const seed = await response.json();
+  const latest = JSON.parse(localStorage.getItem("tarvis-pages-workspace") || "null") || seed;
+  if (latest.state.people.every((name,i)=>name==="Persona "+(i+1))) latest.state.people=seed.state.people;
   if (!workspace || latest.revision > workspace.revision) {
     workspace = latest;
     render();
@@ -126,7 +128,7 @@ function assignment(t) {
   }).join('')}</div><button data-owner="">Lascia da assegnare</button>`);
   dialog.querySelectorAll('[data-owner]').forEach(button=>button.onclick=()=>chooseOwner(t,button.dataset.owner));
 }
-function edit(t) {
+function edit(t, trigger) {
   open(t.title, `<div class="task-context"><span>${esc(t.area)}</span><span>${esc(name(t.owner))}</span></div>
     <div class="task-brief"><h3>Risultato atteso</h3><p>${esc(t.criterion)}</p></div>
     <form>
@@ -144,6 +146,18 @@ function edit(t) {
     save(state=>Object.assign(state.tasks[t.id-1],fields));
   }, 'task-drawer');
   dialog.querySelector('.task-save').prepend(dialog.querySelector('.error'));
+  if (!trigger || reducedMotion.matches) return;
+  const from=trigger.getBoundingClientRect();
+  const to=dialog.getBoundingClientRect();
+  if (matchMedia('(max-width:560px)').matches) {
+    dialog.animate([{transform:'translateY(28px)',opacity:0},{transform:'none',opacity:1}],{duration:260,easing:'ease-out'});
+    return;
+  }
+  dialog.animate([
+    {transformOrigin:'left top',transform:`translate(${from.left-to.left}px,${from.top-to.top}px) perspective(1000px) rotateY(-76deg) scale(.7,.2)`,opacity:.45},
+    {transformOrigin:'left top',transform:'translate(0,0) perspective(1000px) rotateY(0) scale(1)',opacity:1},
+  ],{duration:390,easing:'cubic-bezier(.18,.76,.24,1)'});
+
 }
 function editArea(key) {
   area = key;
@@ -196,7 +210,7 @@ main.addEventListener('click',event=>{
   }
   if (data.take) chooseOwner(workspace.state.tasks[Number(data.take)-1],me);
   if (data.assign) assignment(workspace.state.tasks[Number(data.assign)-1]);
-  if (data.edit) edit(workspace.state.tasks[Number(data.edit)-1]);
+  if (data.edit) edit(workspace.state.tasks[Number(data.edit)-1],button);
   if (data.person) {person=data.person;render();}
   if (data.area) editArea(data.area);
   if ('rename' in data) open('Nomi della squadra',`<form>${workspace.state.people.map((n,i)=>`<label>Persona ${i+1}<input name="name${i}" value="${esc(n)}" required maxlength="40"></label>`).join('')}<button class="primary">Salva nomi</button></form>`, fields=>{
@@ -229,7 +243,7 @@ profile.addEventListener('click',event=>{
 });
 window.addEventListener('hashchange',()=>{if(workspace)render();});
 refresh().catch(error=>{main.textContent=error.message;});
-
+setInterval(()=>{if(!dialog.open && !busy && !document.hidden)refresh().catch(()=>{});},8000);
 
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let orbitPaused=reducedMotion.matches, orbitTime=0, lastOrbitFrame=null, orbitDragging=false;
@@ -289,7 +303,8 @@ function roomView(milestone, done, total, blocked) {
   const {people, tasks} = workspace.state;
   const queue = tasks.filter(task=>!task.owner && task.status!=='Completata');
   const selected = tasks.filter(t=>t.owner===station && t.status!=='Completata');
-  const nextTask = selected.find(t=>t.status==='Bloccata') || selected.sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999') || a.stage-b.stage)[0];
+  selected.sort((a,b)=>Number(b.status==='Bloccata')-Number(a.status==='Bloccata') ||
+    (a.due||'9999').localeCompare(b.due||'9999') || a.stage-b.stage);
   return `<section class="room" aria-label="Mappa della squadra">
     <div class="room-head"><div><p>Milestone corrente</p><h2>${esc(milestone)}</h2></div>
     <a class="room-progress" href="#roadmap"><strong>${done}/${total}</strong><span>risultati completati</span><progress aria-label="Risultati completati" value="${done}" max="${total}"></progress></a></div>
@@ -305,9 +320,9 @@ function roomView(milestone, done, total, blocked) {
     }).join('')}
     ${station===null?'':`<section id="station-detail" class="focus-card" aria-label="Postazione di ${esc(name(station))}">
       <button class="focus-close" data-close-station aria-label="Chiudi postazione">×</button>
-      ${nextTask?`<p>${esc(nextTask.status)}${nextTask.due?' · '+esc(nextTask.due):''}</p><h3>${esc(nextTask.title)}</h3>
-      ${nextTask.next?`<p class="focus-note">${esc(nextTask.next)}</p>`:''}
-      <button class="primary" data-edit="${nextTask.id}">Apri attività</button>`:
+      ${selected.length?`<div class="focus-tasks">${selected.map(t=>`<button class="focus-task" data-edit="${t.id}">
+        <span><small>${esc(t.status)}</small><strong>${esc(t.title)}</strong></span><span aria-hidden="true">›</span>
+      </button>`).join('')}</div>`:
       `<p>Nessuna attività aperta</p><button class="primary" data-station-assign>${station===me?'Scegli un’attività':'Assegna un’attività'}</button>`}
     </section>`}</div><button class="orbit-toggle" data-orbit-toggle aria-label="${orbitLabel()}" title="${orbitLabel()}">${orbitIcon()}</button></section>
     <section class="dispatch"><div class="bar"><div><h2>Lavoro da distribuire</h2><p>Prendi un’attività per te o trascinala su una postazione.</p></div><span class="tag">${queue.length} disponibili</span></div>
