@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TARVIS Control Room</title>
+<link rel="stylesheet" href="style.css?v=task-drawer">
+<script src="app.js?v=task-drawer" defer></script>
+</head>
+<body>
+<div class="dock">
+  <nav aria-label="Navigazione principale">
+    <a href="#centrale" data-dock="centrale"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>Sala</a>
+    <a href="#lavoro" data-dock="lavoro"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M8 10h8m-8 4h5"/></svg>Attività</a>
+    <a href="#roadmap" data-dock="progetto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg>Progetto</a>
+  </nav>
+  <div class="dock-profile">
+    <button id="profile-trigger" type="button" popovertarget="profile" aria-label="Cambia profilo"><span id="profile-avatar" aria-hidden="true"></span></button>
+    <div id="profile" popover aria-label="Scegli il profilo"></div>
+  </div>
+</div>
+<div style="position:fixed;bottom:10px;left:12px;z-index:4;background:#131729;color:#eee;padding:5px 10px;border-radius:20px;font-size:12px">Demo · Dati salvati solo in questo browser</div><main id="main"><p>Caricamento della centrale…</p></main>
+<dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+<div id="notice" role="status"></div>
+</body>
+</html>
